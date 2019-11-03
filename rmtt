@@ -14,18 +14,6 @@ import sys
 
 
 
-logging.getLogger("urllib3").setLevel(logging.DEBUG)
-
-logging.getLogger().setLevel(logging.DEBUG)
-request_logger = logging.getLogger('requests.packages.urllib3')
-request_logger.setLevel(logging.DEBUG)
-request_logger.propagate = True
-
-http.client.HTTPConnection.debuglevel = 1
-
-
-
-
 TimeEntry = namedtuple('TimeEntry', 'issue_id spent_on hours comments activity')
 
 
@@ -41,6 +29,8 @@ parser.add_argument('--user', '-u', required=True,
     help='Redmine user name')
 parser.add_argument('--dry-run', '-n', action='store_true',
     help='Print time entries but don\'t add to Redmine')
+parser.add_argument('--debug', action='store_true',
+    help='Enable debug output')
 parser.add_argument('--delimiter', '-d',
     default=',',
     help='CSV delimiter')
@@ -66,6 +56,17 @@ columns_group.add_argument('--activity', metavar='N', type=int,
 args = parser.parse_args()
 
 
+if args.debug:
+    logging.getLogger("urllib3").setLevel(logging.DEBUG)
+
+    logging.getLogger().setLevel(logging.DEBUG)
+    request_logger = logging.getLogger('requests.packages.urllib3')
+    request_logger.setLevel(logging.DEBUG)
+    request_logger.propagate = True
+
+    http.client.HTTPConnection.debuglevel = 1
+
+
 
 entries = []
 
@@ -86,40 +87,52 @@ for row in reader:
         entries.append(entry)
 
 
-if args.dry_run:
-    for entry in entries:
-        print('{}'.format(entry))
-else:
-    password = getpass(stream=sys.stderr)
+password = getpass(stream=sys.stderr)
 
-    browser = StatefulBrowser()
+browser = StatefulBrowser()
+if args.debug:
     browser.set_verbose(2)
 
-    browser.open(args.url + '/login')
-    form = browser.select_form('#login-form form')
-    form['username'] = args.user
-    form['password'] = password
-    # browser.get_current_form().print_summary()
-    response = browser.submit_selected()
+browser.open(args.url + '/login')
+form = browser.select_form('#login-form form')
+form['username'] = args.user
+form['password'] = password
+# browser.get_current_form().print_summary()
+response = browser.submit_selected()
+# FIXME: Check response.
+if args.debug:
+    print('response: {}'.format(response))
+
+for entry in entries:
+    response = browser.open(args.url + '/issues/{}/time_entries/new'.format(entry.issue_id))
     # FIXME: Check response.
-
-    for entry in entries:
-        browser.open(args.url + '/issues/{}/time_entries/new'.format(entry.issue_id))
+    if args.debug:
+        print('response: {}'.format(response))
         print('current url: {}'.format(browser.get_url()))
-        # FIXME: Check response.
 
-        # I did not succeed in looking up the form via its ID '#new_time_entry'.
-        form = browser.select_form('form[class=new_time_entry]')
+    # I did not succeed in looking up the form via its ID '#new_time_entry'.
+    form = browser.select_form('form[class=new_time_entry]')
+    if args.debug:
         form.print_summary()
-        form['time_entry[issue_id]'] = entry.issue_id
-        # Beware: Despite my test installation with German date format is showing
-        # 02.11.2019 in the browser, the actual date is sent in ISO 8601 (YYYY-MM-DD)
-        # over the wire.
-        form['time_entry[spent_on]'] = entry.spent_on.strftime('%Y-%m-%d')
-        form['time_entry[hours]'] = entry.hours
-        form['time_entry[comments]'] = entry.comments
-        # TOOD: What about resolving the activity ID from the activity name?
-        form['time_entry[activity_id]'] = entry.activity
-        form.choose_submit('continue')
+    form['time_entry[issue_id]'] = entry.issue_id
+    # Beware: Despite my test installation with German date format is showing
+    # 02.11.2019 in the browser, the actual date is sent in ISO 8601 (YYYY-MM-DD)
+    # over the wire.
+    form['time_entry[spent_on]'] = entry.spent_on.strftime('%Y-%m-%d')
+    form['time_entry[hours]'] = entry.hours
+    form['time_entry[comments]'] = entry.comments
+    # TOOD: What about resolving the activity ID from the activity name?
+    form['time_entry[activity_id]'] = entry.activity
+    # TODO: What about submitting via 'commit' so that we could distinguish any
+    # issue with data from the URL loaded afterwards? In case of an error we
+    # are landing on the same page again. In case of success we will be
+    # redirected back to the issue.
+    form.choose_submit('commit')
+    if args.dry_run:
+        print('{}'.format(entry))
+    else:
         response = browser.submit_selected()
         # FIXME: Check response.
+        if args.debug:
+            print('response: {}'.format(response))
+            print('current url: {}'.format(browser.get_url()))
