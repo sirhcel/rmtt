@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
 
-from argparse import ArgumentParser
-from mechanicalsoup import StatefulBrowser
+from argparse import ArgumentParser, FileType
+from collections import namedtuple
+from datetime import datetime
 from getpass import getpass
+from mechanicalsoup import StatefulBrowser
+import csv
 import http.client
 import logging
 import sys
@@ -23,42 +26,100 @@ http.client.HTTPConnection.debuglevel = 1
 
 
 
+TimeEntry = namedtuple('TimeEntry', 'issue_id spent_on hours comments activity_id')
+
+
+# TODO: What about adding a configuration file or just using a configuration
+# file?
 parser = ArgumentParser(description='Redmine Time Tracking Tool '
     'for adding time tracking entries from CSV data')
+parser.add_argument('csv', metavar='CSV_FILE', type=FileType('r'),
+    help='CSV input file with time tracking data')
 parser.add_argument('url', metavar='URL',
     help='Base URL of Redmine installation')
 parser.add_argument('--user', '-u', required=True,
     help='Redmine user name')
+parser.add_argument('--dry-run', '-n', action='store_true',
+    help='Print time entries but don\'t add to Redmine')
+parser.add_argument('--delimiter', '-d',
+    default=',',
+    help='CSV delimiter')
+parser.add_argument('--skip-rows', metavar='ROWS', type=int,
+    default=0,
+    help='Skip first ROWS rows')
+columns_group = parser.add_argument_group('columns', 'CSV columns')
+columns_group.add_argument('--issue', metavar='N',  type=int,
+    help='Column containing issue ID')
+columns_group.add_argument('--date', metavar='N', type=int,
+    help='Column containing date')
+columns_group.add_argument('--date-format', metavar='FORMAT',
+    default='%Y-%m-%d',
+    help='Format string for parsing date column')
+columns_group.add_argument('--hours', metavar='N', type=int,
+    help='Column containing spent hours')
+columns_group.add_argument('--comment', metavar='N', type=int,
+    help='Column containting comment')
+columns_group.add_argument('--activity', metavar='N', type=int,
+    help='Column containing activity ID')
 
 
 args = parser.parse_args()
-password = getpass(stream=sys.stderr)
 
 
 
+entries = []
 
-browser = StatefulBrowser()
-browser.set_verbose(2)
+reader = csv.reader(args.csv, delimiter=args.delimiter)
+for row in reader:
+    if reader.line_num > args.skip_rows:
+        issue_id = int(row[args.issue])
+        date = datetime.strptime(row[args.date], args.date_format)
+        # Redmine supports a whole bunch of formats for the time spent. For
+        # example '1h30', '1.5', '1,5' and '1:30'. Don't limit this by
+        # converting the time to a floating point number on our own.
+        hours = row[args.hours]
+        comment = row[args.comment]
+        activity = int(row[args.activity])
 
-browser.open(args.url + '/login')
-form = browser.select_form('#login-form form')
-form['username'] = args.user
-form['password'] = password
-# browser.get_current_form().print_summary()
-response = browser.submit_selected()
+        entry = TimeEntry(issue_id, date, hours, comment, activity)
 
-browser.open(args.url + '/issues/858/time_entries/new')
-print('current url: {}'.format(browser.get_url()))
+        entries.append(entry)
 
-# I did not succeed in looking up the form via its ID '#new_time_entry'.
-form = browser.select_form('form[class=new_time_entry]')
-form.print_summary()
-# Beware: Despite my test installation with German date format is showing
-# 02.11.2019 in the browser, the actual date is sent in ISO 8601 (YYYY-MM-DD)
-# over the wire.
-form['time_entry[spent_on]'] = '2019-11-02'
-form['time_entry[hours]'] = '1.42'
-form['time_entry[comments]'] = 'A late entry'
-form['time_entry[activity_id]'] = '9'
-form.choose_submit('continue')
-response = browser.submit_selected()
+
+if args.dry_run:
+    for entry in entries:
+        print('{}'.format(entry))
+else:
+    password = getpass(stream=sys.stderr)
+
+    browser = StatefulBrowser()
+    browser.set_verbose(2)
+
+    browser.open(args.url + '/login')
+    form = browser.select_form('#login-form form')
+    form['username'] = args.user
+    form['password'] = password
+    # browser.get_current_form().print_summary()
+    response = browser.submit_selected()
+    # FIXME: Check response.
+
+    for entry in entries:
+        browser.open(args.url + '/issues/{}/time_entries/new'.format(entry.issue_id))
+        print('current url: {}'.format(browser.get_url()))
+        # FIXME: Check response.
+
+        # I did not succeed in looking up the form via its ID '#new_time_entry'.
+        form = browser.select_form('form[class=new_time_entry]')
+        form.print_summary()
+        form['time_entry[issue_id]'] = entry.issue_id
+        # Beware: Despite my test installation with German date format is showing
+        # 02.11.2019 in the browser, the actual date is sent in ISO 8601 (YYYY-MM-DD)
+        # over the wire.
+        form['time_entry[spent_on]'] = entry.spent_on.strftime('%Y-%m-%d')
+        form['time_entry[hours]'] = entry.hours
+        form['time_entry[comments]'] = entry.comments
+        # TOOD: What about resolving the activity ID from the activity name?
+        form['time_entry[activity_id]'] = entry.activity_id
+        form.choose_submit('continue')
+        response = browser.submit_selected()
+        # FIXME: Check response.
