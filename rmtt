@@ -17,6 +17,8 @@ import sys
 TimeEntry = namedtuple('TimeEntry', 'issue_id spent_on hours comments activity')
 
 
+
+
 # TODO: What about adding a configuration file or just using a configuration
 # file?
 parser = ArgumentParser(description='Redmine Time Tracking Tool '
@@ -37,10 +39,14 @@ parser.add_argument('--debug', action='store_true',
 # up for now and add this flag for disabling certificate validation completely.
 parser.add_argument('--insecure', action='store_true',
     help=SUPPRESS)
-parser.add_argument('--delimiter', '-d',
+csv_group = parser.add_argument_group('csv', 'CSV data format')
+csv_group.add_argument('--delimiter', '-d',
     default=',',
     help='CSV delimiter')
-parser.add_argument('--skip-rows', metavar='ROWS', type=int,
+csv_group.add_argument('--date-format', metavar='FORMAT',
+    default='%Y-%m-%d',
+    help='Format string for parsing date column')
+csv_group.add_argument('--skip-rows', metavar='ROWS', type=int,
     default=0,
     help='Skip first ROWS rows')
 columns_group = parser.add_argument_group('columns', 'CSV columns, starting at zero')
@@ -48,9 +54,6 @@ columns_group.add_argument('--issue', metavar='N',  type=int,
     help='Column containing issue ID')
 columns_group.add_argument('--date', metavar='N', type=int,
     help='Column containing date')
-columns_group.add_argument('--date-format', metavar='FORMAT',
-    default='%Y-%m-%d',
-    help='Format string for parsing date column')
 columns_group.add_argument('--hours', metavar='N', type=int,
     help='Column containing spent hours')
 columns_group.add_argument('--comment', metavar='N', type=int,
