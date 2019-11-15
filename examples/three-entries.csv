@@ -1,0 +1,4 @@
+Start;Duration;Task;Order;Customer;Notes;Issue;Activity
+2019-10-01 11:45;1,23;Hardware Development;Bar;Foo;Power Supply Bootstrapping;858;Development
+2019-10-01 14:05;4,56;Software Development;Bar;Foo;Firmware Adaption;858;Development
+2019-10-01 18:00;7,89;System Test;Bar;Foo;Manual System Test;864;Test

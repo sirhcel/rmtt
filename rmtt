@@ -21,8 +21,12 @@ TimeEntry = namedtuple('TimeEntry', 'issue_id spent_on hours comments activity')
 
 # TODO: What about adding a configuration file or just using a configuration
 # file?
-parser = ArgumentParser(description='Redmine Time Tracking Tool '
-    'for adding time tracking entries from CSV data')
+parser = ArgumentParser(
+    fromfile_prefix_chars='@',
+    description='Redmine Time Tracking Tool for adding time tracking entries '
+        'from CSV data',
+    epilog='You may pass pre-configured argument sets from a file by specifying '
+        '@FILE as argument.')
 parser.add_argument('csv', metavar='CSV_FILE', type=FileType('r'),
     help='CSV input file with time tracking data')
 parser.add_argument('url', metavar='URL',

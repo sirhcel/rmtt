@@ -1,0 +1,18 @@
+--user
+tim.test
+--delimiter
+;
+--skip-rows
+1
+--date-format
+%Y-%m-%d %H:%M
+--issue
+6
+--date
+0
+--hours
+1
+--comment
+5
+--activity
+7
