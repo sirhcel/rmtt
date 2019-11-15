@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 
-from argparse import ArgumentParser, FileType
+from argparse import ArgumentParser, FileType, SUPPRESS
 from collections import namedtuple
 from datetime import datetime
 from getpass import getpass
@@ -31,6 +31,12 @@ parser.add_argument('--dry-run', '-n', action='store_true',
     help='Print time entries but don\'t add to Redmine')
 parser.add_argument('--debug', action='store_true',
     help='Enable debug output')
+# TODO: I did not manage to get the validation for an incomplete certificate
+# chain right. Neither with the certificate itself nor the complete chain in a
+# certificate file passed via a HTTPAdapter from requests.adapters. I'm giving
+# up for now and add this flag for disabling certificate validation completely.
+parser.add_argument('--insecure', action='store_true',
+    help=SUPPRESS)
 parser.add_argument('--delimiter', '-d',
     default=',',
     help='CSV delimiter')
@@ -67,7 +73,6 @@ if args.debug:
     http.client.HTTPConnection.debuglevel = 1
 
 
-
 entries = []
 
 reader = csv.reader(args.csv, delimiter=args.delimiter)
@@ -92,6 +97,9 @@ password = getpass(stream=sys.stderr)
 browser = StatefulBrowser()
 if args.debug:
     browser.set_verbose(2)
+
+if args.insecure:
+    browser.session.verify = False
 
 browser.open(args.url + '/login')
 form = browser.select_form('#login-form form')
