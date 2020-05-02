@@ -85,18 +85,23 @@ entries = []
 reader = csv.reader(args.csv, delimiter=args.delimiter)
 for row in reader:
     if reader.line_num > args.skip_rows:
-        issue_id = int(row[args.issue])
-        date = datetime.strptime(row[args.date], args.date_format)
-        # Redmine supports a whole bunch of formats for the time spent. For
-        # example '1h30', '1.5', '1,5' and '1:30'. Don't limit this by
-        # converting the time to a floating point number on our own.
-        hours = row[args.hours]
-        comment = row[args.comment]
-        activity = row[args.activity]
+        try:
+            issue_id = int(row[args.issue])
+            date = datetime.strptime(row[args.date], args.date_format)
+            # Redmine supports a whole bunch of formats for the time spent. For
+            # example '1h30', '1.5', '1,5' and '1:30'. Don't limit this by
+            # converting the time to a floating point number on our own.
+            hours = row[args.hours]
+            comment = row[args.comment]
+            activity = row[args.activity]
 
-        entry = TimeEntry(issue_id, date, hours, comment, activity)
+            entry = TimeEntry(issue_id, date, hours, comment, activity)
 
-        entries.append(entry)
+            entries.append(entry)
+        except ValueError as e:
+            print('Failed to parse values from line {}: {} ({})'.format(
+                reader.line_num, e, row), file=sys.stderr)
+            sys.exit(1)
 
 
 password = getpass(stream=sys.stderr)
