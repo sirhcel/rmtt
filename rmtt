@@ -10,6 +10,7 @@ import csv
 import http.client
 import logging
 import sys
+import urllib3
 
 
 
@@ -113,6 +114,7 @@ if args.debug:
 
 if args.insecure:
     browser.session.verify = False
+    urllib3.disable_warnings()
 
 browser.open(args.url + '/login')
 form = browser.select_form('#login-form form')
