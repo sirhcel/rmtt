@@ -14,7 +14,7 @@ import sys
 
 
 
-TimeEntry = namedtuple('TimeEntry', 'issue_id spent_on hours comments activity')
+TimeEntry = namedtuple('TimeEntry', 'issue_id spent_on hours comments activity source_line')
 
 
 
@@ -95,7 +95,8 @@ for row in reader:
             comment = row[args.comment]
             activity = row[args.activity]
 
-            entry = TimeEntry(issue_id, date, hours, comment, activity)
+            entry = TimeEntry(issue_id, date, hours, comment, activity,
+                reader.line_num)
 
             entries.append(entry)
         except ValueError as e:
