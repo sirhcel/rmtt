@@ -127,6 +127,9 @@ if args.debug:
     print('response: {}'.format(response))
 
 for entry in entries:
+    if args.dry_run or args.debug:
+        print('{}'.format(entry))
+
     response = browser.open(args.url + '/issues/{}/time_entries/new'.format(entry.issue_id))
     # FIXME: Check response.
     if args.debug:
@@ -151,9 +154,8 @@ for entry in entries:
     # are landing on the same page again. In case of success we will be
     # redirected back to the issue.
     form.choose_submit('commit')
-    if args.dry_run:
-        print('{}'.format(entry))
-    else:
+
+    if not args.dry_run:
         response = browser.submit_selected()
         # FIXME: Check response.
         if args.debug:
