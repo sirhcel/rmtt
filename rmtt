@@ -28,10 +28,10 @@ parser = ArgumentParser(
         'from CSV data',
     epilog='You may pass pre-configured argument sets from a file by specifying '
         '@FILE as argument.')
-parser.add_argument('csv', metavar='CSV_FILE', type=FileType('r'),
-    help='CSV input file with time tracking data')
 parser.add_argument('url', metavar='URL',
     help='Base URL of Redmine installation')
+parser.add_argument('csv', metavar='CSV_FILE', type=FileType('r'),
+    help='CSV input file with time tracking data')
 parser.add_argument('--user', '-u', required=True,
     help='Redmine user name')
 parser.add_argument('--dry-run', '-n', action='store_true',

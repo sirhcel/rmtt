@@ -9,5 +9,9 @@ activities (just add them as additional columns).
 You may like using a configuration from file specifying the configuration for
 your data as follows:
 ```
-$ rmtt @examples/args.txt examples/three-entries.csv https://example.com/redmine
+$ rmtt @examples/args.txt https://example.com/redmine examples/three-entries.csv
+```
+And you may even have the URL in your configuration:
+```
+$ rmtt @examples/example-org-args.txt examples/three-entries.csv
 ```
