@@ -8,6 +8,7 @@ from collections import namedtuple
 from datetime import datetime
 from getpass import getpass
 from mechanicalsoup import StatefulBrowser
+from mechanicalsoup.utils import LinkNotFoundError
 import csv
 import http.client
 import logging
@@ -132,34 +133,45 @@ for entry in entries:
     if args.dry_run or args.debug:
         print('{}'.format(entry))
 
-    response = browser.open(args.url + '/issues/{}/time_entries/new'.format(entry.issue_id))
-    # FIXME: Check response.
+    form_url = args.url + '/issues/{}/time_entries/new'.format(entry.issue_id)
     if args.debug:
-        print('response: {}'.format(response))
-        print('current url: {}'.format(browser.get_url()))
+        print('form url: {}'.format(form_url))
 
-    # I did not succeed in looking up the form via its ID '#new_time_entry'.
-    form = browser.select_form('form[class=new_time_entry]')
-    if args.debug:
-        form.print_summary()
-    form['time_entry[issue_id]'] = entry.issue_id
-    # Beware: Despite my test installation with German date format is showing
-    # 02.11.2019 in the browser, the actual date is sent in ISO 8601 (YYYY-MM-DD)
-    # over the wire.
-    form['time_entry[spent_on]'] = entry.spent_on.strftime('%Y-%m-%d')
-    form['time_entry[hours]'] = entry.hours
-    form['time_entry[comments]'] = entry.comments
-    # TOOD: What about resolving the activity ID from the activity name?
-    form['time_entry[activity_id]'] = entry.activity
-    # TODO: What about submitting via 'commit' so that we could distinguish any
-    # issue with data from the URL loaded afterwards? In case of an error we
-    # are landing on the same page again. In case of success we will be
-    # redirected back to the issue.
-    form.choose_submit('commit')
-
-    if not args.dry_run:
-        response = browser.submit_selected()
+    try:
+        response = browser.open(form_url)
         # FIXME: Check response.
         if args.debug:
             print('response: {}'.format(response))
             print('current url: {}'.format(browser.get_url()))
+
+        # I did not succeed in looking up the form via its ID '#new_time_entry'.
+        form = browser.select_form('form[class=new_time_entry]')
+        if args.debug:
+            form.print_summary()
+        form['time_entry[issue_id]'] = entry.issue_id
+        # Beware: Despite my test installation with German date format is showing
+        # 02.11.2019 in the browser, the actual date is sent in ISO 8601 (YYYY-MM-DD)
+        # over the wire.
+        form['time_entry[spent_on]'] = entry.spent_on.strftime('%Y-%m-%d')
+        form['time_entry[hours]'] = entry.hours
+        form['time_entry[comments]'] = entry.comments
+        # TOOD: What about resolving the activity ID from the activity name?
+        form['time_entry[activity_id]'] = entry.activity
+        # TODO: What about submitting via 'commit' so that we could distinguish any
+        # issue with data from the URL loaded afterwards? In case of an error we
+        # are landing on the same page again. In case of success we will be
+        # redirected back to the issue.
+        form.choose_submit('commit')
+
+        if not args.dry_run:
+            response = browser.submit_selected()
+            # FIXME: Check response.
+            if args.debug:
+                print('response: {}'.format(response))
+                print('current url: {}'.format(browser.get_url()))
+    except LinkNotFoundError as e:
+        print('Failed to open URL {} for posting data from line {}: {} ({})'.format(
+            form_url, entry.source_line, e, entry), file=sys.stderr)
+        print('Might this just be transposed digts in the issue id?',
+            file=sys.stderr)
+        sys.exit(1)
