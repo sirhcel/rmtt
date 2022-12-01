@@ -102,7 +102,7 @@ for row in reader:
                 reader.line_num)
 
             entries.append(entry)
-        except ValueError as e:
+        except (IndexError, ValueError) as e:
             print('Failed to parse values from line {}: {} ({})'.format(
                 reader.line_num, e, row), file=sys.stderr)
             sys.exit(1)
